@@ -17,7 +17,7 @@ def estimate_prf(coords, bold, stimuli, parameters={}):
     bold = nb.load(bold).dataobj[coords]
     if bold.std() == 0:
         # Outside brain
-        return (0, 0, 0, 0)    
+        return (0, 0, 0, 0)
 
     stimuli = np.squeeze(nb.load(stimuli).get_fdata())
 
@@ -74,7 +74,7 @@ def load_config(config):
 
 
 if __name__ == '__main__':
-        
+
     parser = argparse.ArgumentParser()
     parser.add_argument("bold")
     parser.add_argument("mask")
@@ -87,9 +87,9 @@ if __name__ == '__main__':
     stimuli = nb.load(args.stimuli)
     volume_shape = bold.shape[:-1]
 
-    valid_voxels = (np.where(mask.get_fdata() > 0)[0])
-    total_voxels = len(valid_voxels)
-    valid_voxels = (i for i in valid_voxels)
+    valid_voxels = np.where(mask.get_fdata() > 0)
+    total_voxels = len(valid_voxels[0])
+    valid_voxels = zip(*valid_voxels)
 
     # total_voxels = np.prod(volume_shape)
     # valid_voxels = product(*[range(n) for n in volume_shape])
@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
         voxels = {}
         done_voxels = 0
-    
+
         print(f'{done_voxels}/{total_voxels}')
         while done_voxels < total_voxels:
             try:
