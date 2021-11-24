@@ -6,6 +6,7 @@
 set -xe
 
 BOLD=$(jq -r .bold config.json)
+MASK=$(jq -r .mask config.json)
 EVENTS=$(jq -r '.events // ""' config.json)
 STIM=$(jq -r .stim config.json)
 
@@ -14,4 +15,4 @@ mkdir -p output
 
 time singularity run -e \
     docker://anibalsolon/bl-app-popeye:latest \
-    python main.py $BOLD $STIM config.json
+    python main.py $BOLD $MASK $STIM config.json
