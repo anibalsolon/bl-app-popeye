@@ -1,4 +1,5 @@
 {
     "bold": "task-prf_bold.nii.gz",
-    "stim": "stim.nii.gz",
+    "mask": "task-prf_mask.nii.gz",
+    "stim": "stim.nii.gz"
 }

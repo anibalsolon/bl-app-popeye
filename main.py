@@ -77,16 +77,22 @@ if __name__ == '__main__':
         
     parser = argparse.ArgumentParser()
     parser.add_argument("bold")
+    parser.add_argument("mask")
     parser.add_argument("stimuli")
     parser.add_argument("config", type=load_config)
     args = parser.parse_args()
 
     bold = nb.load(args.bold)
+    mask = nb.load(args.mask)
     stimuli = nb.load(args.stimuli)
     volume_shape = bold.shape[:-1]
 
-    total_voxels = np.prod(volume_shape)
-    valid_voxels = product(*[range(n) for n in volume_shape])
+    valid_voxels = (np.where(mask.get_fdata() > 0)[0])
+    total_voxels = len(valid_voxels)
+    valid_voxels = (i for i in valid_voxels)
+
+    # total_voxels = np.prod(volume_shape)
+    # valid_voxels = product(*[range(n) for n in volume_shape])
 
     # total_voxels = 5*5*5
     # valid_voxels = product(*[range(50, 55) for n in volume_shape])
@@ -97,10 +103,12 @@ if __name__ == '__main__':
     rf_size = np.zeros(volume_shape)
     rsquared = np.zeros(volume_shape)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as pool:
 
         voxels = {}
         done_voxels = 0
+    
+        print(f'\r{done_voxels}/{total_voxels}', end='')
         while done_voxels < total_voxels:
             try:
                 if len(voxels) < pool._max_workers:
