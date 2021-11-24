@@ -14,12 +14,10 @@ from popeye.visual_stimulus import VisualStimulus
 
 def estimate_prf(coords, bold, stimuli, parameters={}):
 
-    bold = nb.load(bold).dataobj[coords]
+    bold = bold[coords]
     if bold.std() == 0:
         # Outside brain
         return (0, 0, 0, 0)
-
-    stimuli = np.squeeze(nb.load(stimuli).get_fdata())
 
     parameters = {
         'viewing_distance': 38,
@@ -83,11 +81,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     bold = nb.load(args.bold)
+    bold_data = bold.get_fdata()
     mask = nb.load(args.mask)
+    mask_data = mask.get_fdata()
     stimuli = nb.load(args.stimuli)
+    stimuli_data = np.squeeze(stimuli.get_fdata())
+
     volume_shape = bold.shape[:-1]
 
-    valid_voxels = np.where(mask.get_fdata() > 0)
+    valid_voxels = np.where(mask_data > 0)
     total_voxels = len(valid_voxels[0])
     valid_voxels = zip(*valid_voxels)
 
@@ -113,7 +115,7 @@ if __name__ == '__main__':
             try:
                 if len(voxels) < pool._max_workers:
                     vv = next(valid_voxels)
-                    work = pool.submit(estimate_prf, vv, args.bold, args.stimuli)
+                    work = pool.submit(estimate_prf, vv, bold_data, stimuli_data)
                     voxels[work] = vv
             except StopIteration as e:
                 pass
