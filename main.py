@@ -108,7 +108,7 @@ if __name__ == '__main__':
         voxels = {}
         done_voxels = 0
     
-        print(f'\r{done_voxels}/{total_voxels}', end='')
+        print(f'{done_voxels}/{total_voxels}')
         while done_voxels < total_voxels:
             try:
                 if len(voxels) < pool._max_workers:
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
                     done_voxels += 1
 
-                    print(f'\r{done_voxels}/{total_voxels}', end='')
+                    print(f'{done_voxels}/{total_voxels}')
             except concurrent.futures._base.TimeoutError:
                 pass
 
