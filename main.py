@@ -14,10 +14,12 @@ from popeye.visual_stimulus import VisualStimulus
 
 def estimate_prf(coords, bold, stimuli, parameters={}):
 
-    bold = bold[coords]
+    bold = nb.load(bold).dataobj[coords]
     if bold.std() == 0:
         # Outside brain
         return (0, 0, 0, 0)
+
+    stimuli = np.squeeze(nb.load(stimuli).get_fdata())
 
     parameters = {
         'viewing_distance': 38,
@@ -81,11 +83,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     bold = nb.load(args.bold)
-    bold_data = bold.get_fdata()
     mask = nb.load(args.mask)
     mask_data = mask.get_fdata()
     stimuli = nb.load(args.stimuli)
-    stimuli_data = np.squeeze(stimuli.get_fdata())
 
     volume_shape = bold.shape[:-1]
 
@@ -105,38 +105,43 @@ if __name__ == '__main__':
     rf_size = np.zeros(volume_shape)
     rsquared = np.zeros(volume_shape)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=None) as pool:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=6) as pool:
+        try:
+            voxels = {}
+            done_voxels = 0
 
-        voxels = {}
-        done_voxels = 0
+            print(f'{done_voxels}/{total_voxels}')
+            while done_voxels < total_voxels:
+                try:
+                    if len(voxels) < pool._max_workers:
+                        vv = next(valid_voxels)
+                        work = pool.submit(estimate_prf, vv, args.bold, args.stimuli)
+                        voxels[work] = vv
+                except StopIteration as e:
+                    pass
 
-        print(f'{done_voxels}/{total_voxels}')
-        while done_voxels < total_voxels:
-            try:
-                if len(voxels) < pool._max_workers:
-                    vv = next(valid_voxels)
-                    work = pool.submit(estimate_prf, vv, bold_data, stimuli_data)
-                    voxels[work] = vv
-            except StopIteration as e:
-                pass
+                try:
+                    for future in concurrent.futures.as_completed(voxels, timeout=1):
+                        rho, theta, sigma, r2 = future.result(timeout=1)
+                        vv = voxels.pop(future)
 
-            try:
-                for future in concurrent.futures.as_completed(voxels, timeout=1):
-                    rho, theta, sigma, r2 = future.result(timeout=1)
-                    vv = voxels.pop(future)
+                        eccentricity[vv] = rho
+                        polar_angle[vv] = theta
+                        rf_size[vv] = sigma
+                        rsquared[vv] = r2
 
-                    eccentricity[vv] = rho
-                    polar_angle[vv] = theta
-                    rf_size[vv] = sigma
-                    rsquared[vv] = r2
+                        done_voxels += 1
 
-                    done_voxels += 1
+                        print(f'{done_voxels}/{total_voxels}')
+                except concurrent.futures._base.TimeoutError:
+                    pass
 
-                    print(f'{done_voxels}/{total_voxels}')
-            except concurrent.futures._base.TimeoutError:
-                pass
+            nb.save(nb.Nifti1Image(eccentricity, bold.affine), './output/eccentricity.nii.gz')
+            nb.save(nb.Nifti1Image(polar_angle, bold.affine), './output/polarAngle.nii.gz')
+            nb.save(nb.Nifti1Image(rf_size, bold.affine), './output/rfWidth.nii.gz')
+            nb.save(nb.Nifti1Image(rsquared, bold.affine), './output/r2.nii.gz')
 
-        nb.save(nb.Nifti1Image(eccentricity, bold.affine), './output/eccentricity.nii.gz')
-        nb.save(nb.Nifti1Image(polar_angle, bold.affine), './output/polarAngle.nii.gz')
-        nb.save(nb.Nifti1Image(rf_size, bold.affine), './output/rfWidth.nii.gz')
-        nb.save(nb.Nifti1Image(rsquared, bold.affine), './output/r2.nii.gz')
+        except KeyboardInterrupt:
+            pass
+        finally:
+            pool.shutdown()
