@@ -105,7 +105,7 @@ if __name__ == '__main__':
     rf_size = np.zeros(volume_shape)
     rsquared = np.zeros(volume_shape)
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=6) as pool:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=12) as pool:
         try:
             voxels = {}
             done_voxels = 0
